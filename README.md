@@ -3,7 +3,7 @@ An pytorch implementation of Paper "Improved Training of Wasserstein GANs".
 
 # Prerequisites
 
-Python, NumPy, SciPy, Matplotlib
+Python 3, NumPy, SciPy, Matplotlib, torch 1.1.0, tensorflow 1.8.0
 A recent NVIDIA GPU
 
 **A latest master version of Pytorch**
