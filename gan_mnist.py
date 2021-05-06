@@ -107,7 +107,8 @@ def generate_image(frame, netG):
     noise = torch.randn(BATCH_SIZE, 128)
     if use_cuda:
         noise = noise.cuda(gpu)
-    noisev = autograd.Variable(noise, volatile=True)
+    with torch.no_grad():
+        noisev = autograd.Variable(noise)
     samples = netG(noisev)
     samples = samples.view(BATCH_SIZE, 28, 28)
     # print samples.size()
@@ -152,8 +153,8 @@ def calc_gradient_penalty(netD, real_data, fake_data):
 
 netG = Generator()
 netD = Discriminator()
-print netG
-print netD
+print(netG)
+print(netD)
 
 if use_cuda:
     netD = netD.cuda(gpu)
@@ -170,7 +171,7 @@ if use_cuda:
 
 data = inf_train_gen()
 
-for iteration in xrange(ITERS):
+for iteration in range(ITERS):
     start_time = time.time()
     ############################
     # (1) Update D network
@@ -178,8 +179,8 @@ for iteration in xrange(ITERS):
     for p in netD.parameters():  # reset requires_grad
         p.requires_grad = True  # they are set to False below in netG update
 
-    for iter_d in xrange(CRITIC_ITERS):
-        _data = data.next()
+    for iter_d in range(CRITIC_ITERS):
+        _data = next(data)
         real_data = torch.Tensor(_data)
         if use_cuda:
             real_data = real_data.cuda(gpu)
@@ -197,7 +198,8 @@ for iteration in xrange(ITERS):
         noise = torch.randn(BATCH_SIZE, 128)
         if use_cuda:
             noise = noise.cuda(gpu)
-        noisev = autograd.Variable(noise, volatile=True)  # totally freeze netG
+        with torch.no_grad():
+            noisev = autograd.Variable(noise)  # totally freeze netG
         fake = autograd.Variable(netG(noisev).data)
         inputv = fake
         D_fake = netD(inputv)
@@ -243,7 +245,8 @@ for iteration in xrange(ITERS):
             imgs = torch.Tensor(images)
             if use_cuda:
                 imgs = imgs.cuda(gpu)
-            imgs_v = autograd.Variable(imgs, volatile=True)
+            with torch.no_grad():
+                imgs_v = autograd.Variable(imgs)
 
             D = netD(imgs_v)
             _dev_disc_cost = -D.mean().cpu().data.numpy()
@@ -253,7 +256,7 @@ for iteration in xrange(ITERS):
         generate_image(iteration, netG)
 
     # Write logs every 100 iters
-    if (iteration < 5) or (iteration % 100 == 99):
-        lib.plot.flush()
+    # if (iteration < 5) or (iteration % 100 == 99):
+        # lib.plot.flush()
 
     lib.plot.tick()

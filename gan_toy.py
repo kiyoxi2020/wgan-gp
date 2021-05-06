@@ -104,8 +104,8 @@ def generate_image(true_dist):
     points[:, :, 0] = np.linspace(-RANGE, RANGE, N_POINTS)[:, None]
     points[:, :, 1] = np.linspace(-RANGE, RANGE, N_POINTS)[None, :]
     points = points.reshape((-1, 2))
-
-    points_v = autograd.Variable(torch.Tensor(points), volatile=True)
+    with torch.no_grad():
+        points_v = autograd.Variable(torch.Tensor(points))
     if use_cuda:
         points_v = points_v.cuda()
     disc_map = netD(points_v).cpu().data.numpy()
@@ -113,7 +113,8 @@ def generate_image(true_dist):
     noise = torch.randn(BATCH_SIZE, 2)
     if use_cuda:
         noise = noise.cuda()
-    noisev = autograd.Variable(noise, volatile=True)
+    with torch.no_grad():
+        noisev = autograd.Variable(noise)
     true_dist_v = autograd.Variable(torch.Tensor(true_dist).cuda() if use_cuda else torch.Tensor(true_dist))
     samples = netG(noisev, true_dist_v).cpu().data.numpy()
 
@@ -136,9 +137,9 @@ def inf_train_gen():
     if DATASET == '25gaussians':
 
         dataset = []
-        for i in xrange(100000 / 25):
-            for x in xrange(-2, 3):
-                for y in xrange(-2, 3):
+        for i in range(100000 / 25):
+            for x in range(-2, 3):
+                for y in range(-2, 3):
                     point = np.random.randn(2) * 0.05
                     point[0] += 2 * x
                     point[1] += 2 * y
@@ -147,7 +148,7 @@ def inf_train_gen():
         np.random.shuffle(dataset)
         dataset /= 2.828  # stdev
         while True:
-            for i in xrange(len(dataset) / BATCH_SIZE):
+            for i in range(len(dataset) / BATCH_SIZE):
                 yield dataset[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
 
     elif DATASET == 'swissroll':
@@ -177,7 +178,7 @@ def inf_train_gen():
         centers = [(scale * x, scale * y) for x, y in centers]
         while True:
             dataset = []
-            for i in xrange(BATCH_SIZE):
+            for i in range(BATCH_SIZE):
                 point = np.random.randn(2) * .02
                 center = random.choice(centers)
                 point[0] += center[0]
@@ -215,8 +216,8 @@ netG = Generator()
 netD = Discriminator()
 netD.apply(weights_init)
 netG.apply(weights_init)
-print netG
-print netD
+print(netG)
+print(netD)
 
 if use_cuda:
     netD = netD.cuda()
@@ -233,15 +234,15 @@ if use_cuda:
 
 data = inf_train_gen()
 
-for iteration in xrange(ITERS):
+for iteration in range(ITERS):
     ############################
     # (1) Update D network
     ###########################
     for p in netD.parameters():  # reset requires_grad
         p.requires_grad = True  # they are set to False below in netG update
 
-    for iter_d in xrange(CRITIC_ITERS):
-        _data = data.next()
+    for iter_d in range(CRITIC_ITERS):
+        _data = next(data)
         real_data = torch.Tensor(_data)
         if use_cuda:
             real_data = real_data.cuda()
@@ -258,7 +259,8 @@ for iteration in xrange(ITERS):
         noise = torch.randn(BATCH_SIZE, 2)
         if use_cuda:
             noise = noise.cuda()
-        noisev = autograd.Variable(noise, volatile=True)  # totally freeze netG
+        with torch.no_grad():
+            noisev = autograd.Variable(noise)  # totally freeze netG
         fake = autograd.Variable(netG(noisev, real_data_v).data)
         inputv = fake
         D_fake = netD(inputv)
@@ -281,7 +283,7 @@ for iteration in xrange(ITERS):
             p.requires_grad = False  # to avoid computation
         netG.zero_grad()
 
-        _data = data.next()
+        _data = next(data)
         real_data = torch.Tensor(_data)
         if use_cuda:
             real_data = real_data.cuda()
@@ -304,6 +306,6 @@ for iteration in xrange(ITERS):
     if not FIXED_GENERATOR:
         lib.plot.plot('tmp/' + DATASET + '/' + 'gen cost', G_cost.cpu().data.numpy())
     if iteration % 100 == 99:
-        lib.plot.flush()
+        # lib.plot.flush()
         generate_image(_data)
     lib.plot.tick()
